@@ -1,13 +1,3 @@
-/* roam/sr - Spaced Repetition in Roam Research
-   Author: Adam Krivka
-   v1.0.1
-   https://github.com/aidam38/roamsr
- */
-
-var VERSION = "v1.0.1";
-
-if (!window.roamsr) window.roamsr = {};
-
 /* ====== SCHEDULERS / ALGORITHMS ====== */
 
 roamsr.ankiScheduler = (userConfig) => {
@@ -1040,12 +1030,8 @@ document.addEventListener("click", roamsr.buttonClickHandler, false);
 
 /* ====== CALLING FUNCTIONS DIRECTLY ====== */
 
-console.log("🗃️ Loading roam/sr " + VERSION + ".");
-
 roamsr.loadSettings();
 roamsr.addBasicStyles();
 roamsr.loadState(-1).then((res) => {
 	roamsr.addWidget();
 });
-
-console.log("🗃️ Successfully loaded roam/sr " + VERSION + ".");
