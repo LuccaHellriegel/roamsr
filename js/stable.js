@@ -1,18 +1,21 @@
 /* ====== SCHEDULERS / ALGORITHMS ====== */
 
+var roamsr = {};
+
+var defaultConfig = {
+	defaultFactor: 2.5,
+	firstFewIntervals: [1, 6],
+	factorModifier: 0.15,
+	easeBonus: 1.3,
+	hardFactor: 1.2,
+	minFactor: 1.3,
+	jitterPercentage: 0.05,
+	maxInterval: 50 * 365,
+	responseTexts: ["Again.", "Hard.", "Good.", "Easy."],
+};
+
 roamsr.ankiScheduler = (userConfig) => {
-	var config = {
-		defaultFactor: 2.5,
-		firstFewIntervals: [1, 6],
-		factorModifier: 0.15,
-		easeBonus: 1.3,
-		hardFactor: 1.2,
-		minFactor: 1.3,
-		jitterPercentage: 0.05,
-		maxInterval: 50 * 365,
-		responseTexts: ["Again.", "Hard.", "Good.", "Easy."],
-	};
-	config = Object.assign(config, userConfig);
+	var config = Object.assign(defaultConfig, userConfig);
 
 	var algorithm = (history) => {
 		var lastFail = history ? history.map((review) => review.signal).lastIndexOf("1") : 0;
@@ -139,23 +142,24 @@ roamsr.getFuckingDate = (str) => {
 	}
 };
 
+var months = [
+	"January",
+	"February",
+	"March",
+	"April",
+	"May",
+	"June",
+	"July",
+	"August",
+	"September",
+	"October",
+	"November",
+	"December",
+];
+
 roamsr.getRoamDate = (date) => {
 	if (!date || date == 0) date = new Date();
 
-	var months = [
-		"January",
-		"February",
-		"March",
-		"April",
-		"May",
-		"June",
-		"July",
-		"August",
-		"September",
-		"October",
-		"November",
-		"December",
-	];
 	var suffix = ((d) => {
 		if (d > 3 && d < 21) return "th";
 		switch (d % 10) {
@@ -364,74 +368,75 @@ roamsr.loadCards = async (limits, dateBasis = new Date()) => {
 
 /* ====== STYLES ====== */
 
+var basicStylesCSS = `
+.roamsr-widget__review-button {
+  color: #5C7080 !important;
+}
+
+.roamsr-widget__review-button:hover {
+  color: #F5F8FA !important;
+}
+
+.roamsr-return-button-container {
+  z-index: 100000;
+  margin: 5px 0px 5px 45px;
+}
+
+.roamsr-wrapper {
+  pointer-events: none;
+  position: relative;
+  bottom: 180px;
+  justify-content: center;
+}
+
+.roamsr-container {
+  width: 100%;
+  max-width: 600px;
+  justify-content: center;
+  align-items: center;
+  padding: 5px 20px;
+}
+
+.roamsr-button {
+  z-index: 10000;
+  pointer-events: all;
+}
+
+.roamsr-response-area {
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 15px;
+}
+
+.roamsr-flag-button-container {
+  width: 100%;
+}
+`;
+
 roamsr.addBasicStyles = () => {
-	var style = `
-  .roamsr-widget__review-button {
-    color: #5C7080 !important;
-  }
-  
-  .roamsr-widget__review-button:hover {
-    color: #F5F8FA !important;
-  }
-  
-  .roamsr-return-button-container {
-    z-index: 100000;
-    margin: 5px 0px 5px 45px;
-  }
-
-  .roamsr-wrapper {
-    pointer-events: none;
-    position: relative;
-    bottom: 180px;
-    justify-content: center;
-  }
-
-  .roamsr-container {
-    width: 100%;
-    max-width: 600px;
-    justify-content: center;
-    align-items: center;
-    padding: 5px 20px;
-  }
-
-  .roamsr-button {
-    z-index: 10000;
-    pointer-events: all;
-  }
-
-  .roamsr-response-area {
-    flex-wrap: wrap;
-    justify-content: center;
-    margin-bottom: 15px;
-  }
-
-  .roamsr-flag-button-container {
-    width: 100%;
-  }
-  `;
 	var basicStyles = Object.assign(document.createElement("style"), {
 		id: "roamsr-css-basic",
-		innerHTML: style,
+		innerHTML: basicStylesCSS,
 	});
 	document.getElementsByTagName("head")[0].appendChild(basicStyles);
 };
 
+var styleQueryCustomStyle = `[:find (pull ?style [:block/string]) :where [?roamsr :node/title "roam\/sr"] [?roamsr :block/children ?css] [?css :block/refs ?roamcss] [?roamcss :node/title "roam\/css"] [?css :block/children ?style]]`;
+var styleIdCustomStyle = "roamsr-css-custom";
+
 roamsr.setCustomStyle = (yes) => {
-	var styleId = "roamsr-css-custom";
-	var element = document.getElementById(styleId);
+	var element = document.getElementById(styleIdCustomStyle);
 	if (element) element.remove();
 
 	if (yes) {
 		// Query new style
-		var styleQuery = window.roamAlphaAPI.q(
-			`[:find (pull ?style [:block/string]) :where [?roamsr :node/title "roam\/sr"] [?roamsr :block/children ?css] [?css :block/refs ?roamcss] [?roamcss :node/title "roam\/css"] [?css :block/children ?style]]`
-		);
+		var styleQueryResult = window.roamAlphaAPI.q(styleQueryCustomStyle);
 
-		if (styleQuery && styleQuery.length != 0) {
-			var customStyle = styleQuery[0][0].string.replace("`" + "``css", "").replace("`" + "``", "");
+		if (styleQueryResult && styleQueryResult.length != 0) {
+			var customStyle = styleQueryResult[0][0].string.replace("`" + "``css", "").replace("`" + "``", "");
 
 			var roamsrCSS = Object.assign(document.createElement("style"), {
-				id: styleId,
+				id: styleIdCustomStyle,
 				innerHTML: customStyle,
 			});
 
@@ -440,9 +445,10 @@ roamsr.setCustomStyle = (yes) => {
 	}
 };
 
+var styleIdShowAnswerAndCloze = "roamsr-css-mainview";
+
 roamsr.showAnswerAndCloze = (yes) => {
-	var styleId = "roamsr-css-mainview";
-	var element = document.getElementById(styleId);
+	var element = document.getElementById(styleIdShowAnswerAndCloze);
 	if (element) element.remove();
 
 	if (yes) {
@@ -460,7 +466,7 @@ roamsr.showAnswerAndCloze = (yes) => {
     }`;
 
 		var basicStyles = Object.assign(document.createElement("style"), {
-			id: styleId,
+			id: styleIdShowAnswerAndCloze,
 			innerHTML: style,
 		});
 		document.getElementsByTagName("head")[0].appendChild(basicStyles);
@@ -468,6 +474,9 @@ roamsr.showAnswerAndCloze = (yes) => {
 };
 
 /* ====== MAIN FUNCTIONS ====== */
+
+var queryReviewBlock =
+	'[:find (pull ?reviewBlock [:block/uid]) :in $ ?dailyNoteUID :where [?reviewBlock :block/refs ?reviewPage] [?reviewPage :node/title "roam/sr/review"] [?dailyNote :block/children ?reviewBlock] [?dailyNote :block/uid ?dailyNoteUID]]';
 
 roamsr.scheduleCardIn = async (card, interval) => {
 	var nextDate = new Date();
@@ -485,14 +494,11 @@ roamsr.scheduleCardIn = async (card, interval) => {
 	await roamsr.sleep();
 
 	// Query for the [[roam/sr/review]] block
-	var queryReviewBlock = window.roamAlphaAPI.q(
-		'[:find (pull ?reviewBlock [:block/uid]) :in $ ?dailyNoteUID :where [?reviewBlock :block/refs ?reviewPage] [?reviewPage :node/title "roam/sr/review"] [?dailyNote :block/children ?reviewBlock] [?dailyNote :block/uid ?dailyNoteUID]]',
-		nextRoamDate.uid
-	);
+	var queryReviewBlockResult = window.roamAlphaAPI.q(queryReviewBlock, nextRoamDate.uid);
 
 	// Check if it's there; if not, create it
 	var topLevelUid;
-	if (queryReviewBlock.length == 0) {
+	if (queryReviewBlockResult.length == 0) {
 		topLevelUid = roamsr.createUid();
 		await window.roamAlphaAPI.createBlock({
 			location: {
@@ -506,7 +512,7 @@ roamsr.scheduleCardIn = async (card, interval) => {
 		});
 		await roamsr.sleep();
 	} else {
-		topLevelUid = queryReviewBlock[0][0].uid;
+		topLevelUid = queryReviewBlockResult[0][0].uid;
 	}
 
 	// Generate the block
@@ -628,21 +634,21 @@ roamsr.goToCurrentCard = async () => {
 
 /* ====== SESSIONS ====== */
 
+var defaultSettings = {
+	mainTag: "sr",
+	flagTag: "f",
+	clozeStyle: "highlight", // "highlight" or "block-ref"
+	defaultDeck: {
+		algorithm: null,
+		config: {},
+		newCardLimit: 20,
+		reviewLimit: 100,
+	},
+	customDecks: [],
+};
+
 roamsr.loadSettings = () => {
-	// Default settings
-	roamsr.settings = {
-		mainTag: "sr",
-		flagTag: "f",
-		clozeStyle: "highlight", // "highlight" or "block-ref"
-		defaultDeck: {
-			algorithm: null,
-			config: {},
-			newCardLimit: 20,
-			reviewLimit: 100,
-		},
-		customDecks: [],
-	};
-	roamsr.settings = Object.assign(roamsr.settings, window.roamsrUserSettings);
+	roamsr.settings = Object.assign(defaultSettings, window.roamsrUserSettings);
 };
 
 roamsr.loadState = async (i) => {
@@ -658,6 +664,8 @@ roamsr.getCurrentCard = () => {
 	var card = roamsr.state.queue[roamsr.state.currentIndex];
 	return card ? card : {};
 };
+
+var endSessionDIV = "<div style='padding: 5px 0px'><span class='bp3-icon bp3-icon-cross'></span> END SESSION</div>";
 
 roamsr.startSession = async () => {
 	if (roamsr.state && roamsr.state.queue.length > 0) {
@@ -682,7 +690,7 @@ roamsr.startSession = async () => {
 
 		// Change widget
 		var widget = document.querySelector(".roamsr-widget");
-		widget.innerHTML = "<div style='padding: 5px 0px'><span class='bp3-icon bp3-icon-cross'></span> END SESSION</div>";
+		widget.innerHTML = endSessionDIV;
 		widget.onclick = roamsr.endSession;
 	}
 };
@@ -871,6 +879,15 @@ roamsr.removeReturnButton = () => {
 };
 
 // SIDEBAR WIDGET
+
+var sidebarWidgetSPAN = `<span style="padding-right: 8px;"><svg width="16" height="16" version="1.1" viewBox="0 0 4.2333 4.2333" style="color:5c7080;">
+<g id="chat_1_" transform="matrix(.26458 0 0 .26458 115.06 79.526)">
+  <g transform="matrix(-.79341 0 0 -.88644 -420.51 -284.7)" fill="currentColor">
+	<path d="m6 13.665c-1.1 0-2-1.2299-2-2.7331v-6.8327h-3c-0.55 0-1 0.61495-1 1.3665v10.932c0 0.7516 0.45 1.3665 1 1.3665h9c0.55 0 1-0.61495 1-1.3665l-5.04e-4 -1.5989v-1.1342h-0.8295zm9-13.665h-9c-0.55 0-1 0.61495-1 1.3665v9.5658c0 0.7516 0.45 1.3665 1 1.3665h9c0.55 0 1-0.61495 1-1.3665v-9.5658c0-0.7516-0.45-1.3665-1-1.3665z"
+	  clip-rule="evenodd" fill="currentColor" fill-rule="evenodd" />
+  </g>
+</g></svg></span> REVIEW`;
+
 roamsr.createWidget = () => {
 	var widget = Object.assign(document.createElement("div"), {
 		className: "log-button flex-h-box roamsr-widget",
@@ -879,14 +896,7 @@ roamsr.createWidget = () => {
 
 	var reviewButton = Object.assign(document.createElement("div"), {
 		className: "bp3-button bp3-minimal roamsr-widget__review-button",
-		innerHTML: `<span style="padding-right: 8px;"><svg width="16" height="16" version="1.1" viewBox="0 0 4.2333 4.2333" style="color:5c7080;">
-  <g id="chat_1_" transform="matrix(.26458 0 0 .26458 115.06 79.526)">
-    <g transform="matrix(-.79341 0 0 -.88644 -420.51 -284.7)" fill="currentColor">
-      <path d="m6 13.665c-1.1 0-2-1.2299-2-2.7331v-6.8327h-3c-0.55 0-1 0.61495-1 1.3665v10.932c0 0.7516 0.45 1.3665 1 1.3665h9c0.55 0 1-0.61495 1-1.3665l-5.04e-4 -1.5989v-1.1342h-0.8295zm9-13.665h-9c-0.55 0-1 0.61495-1 1.3665v9.5658c0 0.7516 0.45 1.3665 1 1.3665h9c0.55 0 1-0.61495 1-1.3665v-9.5658c0-0.7516-0.45-1.3665-1-1.3665z"
-        clip-rule="evenodd" fill="currentColor" fill-rule="evenodd" />
-    </g>
-  </g></svg></span> REVIEW`,
-		//  <span class="bp3-icon bp3-icon-chevron-down expand-icon"></span>`
+		innerHTML: sidebarWidgetSPAN,
 		onclick: roamsr.startSession,
 	});
 	reviewButton.style.cssText = "padding: 2px 8px;";
@@ -930,7 +940,6 @@ roamsr.addWidget = () => {
 
 /* ====== KEYBINDINGS ====== */
 roamsr.processKey = (e) => {
-	// console.log("alt: " + e.altKey + "  shift: " + e.shiftKey + "  ctrl: " + e.ctrlKey + "   code: " + e.code + "   key: " + e.key);
 	if (document.activeElement.type == "textarea" || !location.href.includes(roamsr.getCurrentCard().uid)) {
 		return;
 	}
@@ -988,10 +997,6 @@ roamsr.processKey = (e) => {
 	}
 };
 
-roamsr.processKeyAlways = (e) => {
-	// Alt+enter TODO
-};
-
 roamsr.addKeyListener = () => {
 	document.addEventListener("keydown", roamsr.processKey);
 };
@@ -1001,16 +1006,19 @@ roamsr.removeKeyListener = () => {
 };
 
 /* ====== {{sr}} BUTTON ====== */
+
+var mainQuery = `[:find (pull ?page
+	[{:block/children [:block/uid :block/string]}])
+:in $ ?uid
+:where [?page :block/uid ?uid]]`;
+
 roamsr.buttonClickHandler = async (e) => {
 	if (e.target.tagName === "BUTTON" && e.target.textContent === roamsr.settings.mainTag) {
 		var block = e.target.closest(".roam-block");
 		if (block) {
 			var uid = block.id.substring(block.id.length - 9);
-			const q = `[:find (pull ?page
-                    [{:block/children [:block/uid :block/string]}])
-                :in $ ?uid
-                :where [?page :block/uid ?uid]]`;
-			var results = await window.roamAlphaAPI.q(q, uid);
+
+			var results = await window.roamAlphaAPI.q(mainQuery, uid);
 			if (results.length == 0) return;
 			var children = results[0][0].children;
 			for (child of children) {
