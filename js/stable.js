@@ -15,7 +15,6 @@ roamsr.ankiScheduler = (userConfig) => {
 	config = Object.assign(config, userConfig);
 
 	var algorithm = (history) => {
-		var nextInterval;
 		var lastFail = history ? history.map((review) => review.signal).lastIndexOf("1") : 0;
 		history = history ? (lastFail == -1 ? history : history.slice(lastFail + 1)) : [];
 		// Check if in learning phase
@@ -750,7 +749,7 @@ roamsr.getCounter = (deck) => {
 };
 
 roamsr.updateCounters = () => {
-	var counter = document.querySelectorAll(".roamsr-counter").forEach((counter) => {
+	document.querySelectorAll(".roamsr-counter").forEach((counter) => {
 		counter.innerHTML = roamsr.getCounter().innerHTML;
 		counter.style.cssText = !roamsr.state.limits ? "font-style: italic;" : "font-style: inherit;";
 	});
